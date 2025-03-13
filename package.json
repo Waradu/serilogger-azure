@@ -1,0 +1,31 @@
+{
+  "name": "serilogger-azure",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "version": "0.1.0",
+  "repository": "waradu/serilogger-azure",
+  "license": "MIT",
+  "description": "A Serilog Azure Storage Account Container Blob Sink",
+  "keywords": [
+    "serilog",
+    "serilogger",
+    "log",
+    "logger",
+    "azure",
+    "blob"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.26.0",
+    "serilogger": "^0.5.0"
+  }
+}
