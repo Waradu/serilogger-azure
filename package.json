@@ -3,7 +3,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "repository": "waradu/serilogger-azure",
   "license": "MIT",
   "description": "A Serilogger Azure Storage Account Container Blob Sink",

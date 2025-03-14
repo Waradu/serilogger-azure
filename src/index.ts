@@ -43,13 +43,6 @@ export class AzureSink implements Sink {
     }
   }
 
-  private generateNewBlobName(): string {
-    console.log("now");
-    const baseName = this.options.storageFileName.replace(/\.txt$/, "");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    return `${baseName}-${timestamp}.txt`;
-  }
-
   private startTimer() {
     clearInterval(this.flushTimer);
     this.flushTimer = setInterval(() => {
@@ -138,7 +131,7 @@ export class AzureSink implements Sink {
 
       await appendBlobClient.appendBlock(content, Buffer.byteLength(content));
     } catch (reason) {
-      console.log(`Failed to upload to azure storage account. ${reason}`);
+      console.error(`Failed to upload to azure storage account. ${reason}`);
     }
   }
 }
