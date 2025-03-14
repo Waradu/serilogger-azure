@@ -1,5 +1,5 @@
-import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
-import { LogEvent, LogEventLevel, type Sink } from "serilogger";
+import { BlobServiceClient } from "@azure/storage-blob";
+import { LogEventLevel, type LogEvent, type Sink } from "serilogger";
 
 export interface AzureSinkOptions {
   connectionString: string;
@@ -25,25 +25,18 @@ export interface AzureSinkOptionsInternal extends AzureSinkOptions {
   batchPostingLimit: number;
   flushImmediately: boolean;
   restrictedToMinimumLevel: LogEventLevel;
-  blobSizeLimitBytes?: number;
-  retainedBlobCountLimit?: number;
 }
 
 export class AzureSink implements Sink {
   protected options: AzureSinkOptionsInternal;
   private eventBuffer: LogEvent[] = [];
   private flushTimer?: NodeJS.Timer;
-  private currentBlobName: string;
 
   constructor(options: AzureSinkOptions) {
     this.options = {
       ...defaultOptions,
       ...(options || {}),
     } as AzureSinkOptionsInternal;
-
-    this.currentBlobName = this.options.blobSizeLimitBytes
-      ? this.generateNewBlobName()
-      : options.storageFileName;
 
     if (!this.options.flushImmediately) {
       this.startTimer();
@@ -134,7 +127,7 @@ export class AzureSink implements Sink {
         this.options.storageContainerName
       );
       const appendBlobClient = containerClient.getAppendBlobClient(
-        this.currentBlobName
+        this.options.storageFileName
       );
 
       const exists = await appendBlobClient.exists();
@@ -143,51 +136,9 @@ export class AzureSink implements Sink {
         await appendBlobClient.create();
       }
 
-      if (this.options.blobSizeLimitBytes) {
-        const properties = await appendBlobClient.getProperties();
-        const currentSize = properties.contentLength || 0;
-        const newContentSize = Buffer.byteLength(content);
-
-        if (currentSize + newContentSize > this.options.blobSizeLimitBytes) {
-          this.currentBlobName = this.generateNewBlobName();
-        }
-      }
-
       await appendBlobClient.appendBlock(content, Buffer.byteLength(content));
-      await this.cleanupOldBlobs(containerClient);
     } catch (reason) {
       console.log(`Failed to upload to azure storage account. ${reason}`);
-    }
-  }
-
-  private async cleanupOldBlobs(containerClient: ContainerClient) {
-    if (
-      !this.options.retainedBlobCountLimit ||
-      this.options.retainedBlobCountLimit < 1
-    )
-      return;
-
-    const prefix = this.options.storageFileName.replace(/\.txt$/, "");
-    const blobs: { name: string; lastModified: Date }[] = [];
-
-    for await (const blob of containerClient.listBlobsFlat({ prefix })) {
-      if (blob.properties.lastModified) {
-        blobs.push({
-          name: blob.name,
-          lastModified: blob.properties.lastModified,
-        });
-      }
-    }
-
-    blobs.sort((a, b) => a.lastModified.getTime() - b.lastModified.getTime());
-
-    while (blobs.length > this.options.retainedBlobCountLimit) {
-      const blobToDelete = blobs.shift();
-      if (blobToDelete) {
-        const blobClient = containerClient.getBlobClient(blobToDelete.name);
-        await blobClient.delete();
-        console.log(`Deleted old blob: ${blobToDelete.name}`);
-      }
     }
   }
 }
